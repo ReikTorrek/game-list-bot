@@ -38,8 +38,12 @@ final readonly class GameMessageFormatter
             $prefixLines[] = sprintf('Steam App ID: %d', $game->getSteamAppId());
         }
 
-        if ($game->getSteamPrice() !== null) {
+        if ($game->getSteamPrice() !== null && $game->getSteamPriceRub() !== null) {
+            $prefixLines[] = sprintf('Цена в Steam: %s (%s)', $game->getSteamPrice(), $game->getSteamPriceRub());
+        } elseif ($game->getSteamPrice() !== null) {
             $prefixLines[] = sprintf('Цена в Steam: %s', $game->getSteamPrice());
+        } elseif ($game->getSteamPriceRub() !== null) {
+            $prefixLines[] = sprintf('Цена в Steam (RU): %s', $game->getSteamPriceRub());
         }
 
         if ($game->getSteamRecentReviewSummary() !== null) {

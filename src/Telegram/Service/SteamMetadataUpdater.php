@@ -34,6 +34,7 @@ final readonly class SteamMetadataUpdater
             ->setSteamAppId($steamMetadata->appId)
             ->setSteamName($steamMetadata->name)
             ->setSteamPrice($steamMetadata->price)
+            ->setSteamPriceRub($steamMetadata->priceRub)
             ->setSteamRecentReviewSummary($steamMetadata->recentReviewSummary)
             ->setSteamOverallReviewSummary($steamMetadata->overallReviewSummary);
 

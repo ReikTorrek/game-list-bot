@@ -35,6 +35,18 @@ final class SteamStoreClientTest extends TestCase
                 ],
             ], JSON_THROW_ON_ERROR)),
             new MockResponse(json_encode([
+                '620' => [
+                    'success' => true,
+                    'data' => [
+                        'name' => 'Portal 2',
+                        'is_free' => false,
+                        'price_overview' => [
+                            'final_formatted' => '385 pуб.',
+                        ],
+                    ],
+                ],
+            ], JSON_THROW_ON_ERROR)),
+            new MockResponse(json_encode([
                 'query_summary' => [
                     'review_score_desc' => 'Крайне положительные',
                     'total_positive' => 980,
@@ -57,6 +69,7 @@ final class SteamStoreClientTest extends TestCase
         self::assertSame(620, $metadata->appId);
         self::assertSame('Portal 2', $metadata->name);
         self::assertSame('$9.99', $metadata->price);
+        self::assertSame('385 pуб.', $metadata->priceRub);
         self::assertSame('Крайне положительные (98%, 1 000 отзывов)', $metadata->recentReviewSummary);
         self::assertSame('Очень положительные (97%, 10 000 отзывов)', $metadata->overallReviewSummary);
     }

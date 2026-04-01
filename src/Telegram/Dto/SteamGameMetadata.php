@@ -8,6 +8,7 @@ final readonly class SteamGameMetadata
         public int $appId,
         public ?string $name,
         public ?string $price,
+        public ?string $priceRub,
         public ?string $recentReviewSummary,
         public ?string $overallReviewSummary,
     ) {

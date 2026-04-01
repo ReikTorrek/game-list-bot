@@ -35,6 +35,9 @@ class Game
     private ?string $steamPrice = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    private ?string $steamPriceRub = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
     private ?string $steamRecentReviewSummary = null;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -129,6 +132,18 @@ class Game
     public function setSteamPrice(?string $steamPrice): self
     {
         $this->steamPrice = $steamPrice;
+
+        return $this;
+    }
+
+    public function getSteamPriceRub(): ?string
+    {
+        return $this->steamPriceRub;
+    }
+
+    public function setSteamPriceRub(?string $steamPriceRub): self
+    {
+        $this->steamPriceRub = $steamPriceRub;
 
         return $this;
     }

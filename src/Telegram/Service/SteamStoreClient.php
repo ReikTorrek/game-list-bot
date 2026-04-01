@@ -24,6 +24,7 @@ final readonly class SteamStoreClient
         }
 
         $appDetails = $this->fetchAppDetails($appId);
+        $appDetailsRu = $this->storeCountry === 'ru' ? $appDetails : $this->fetchAppDetails($appId, 'ru');
         $recentSummary = $this->fetchReviewSummary($appId, true);
         $overallSummary = $this->fetchReviewSummary($appId, false);
 
@@ -31,6 +32,7 @@ final readonly class SteamStoreClient
             appId: $appId,
             name: $this->extractName($appDetails),
             price: $this->extractPrice($appDetails),
+            priceRub: $this->extractPrice($appDetailsRu),
             recentReviewSummary: $recentSummary,
             overallReviewSummary: $overallSummary,
         );
@@ -57,12 +59,12 @@ final readonly class SteamStoreClient
      * @return array<string, mixed>|null
      * @throws ExceptionInterface
      */
-    private function fetchAppDetails(int $appId): ?array
+    private function fetchAppDetails(int $appId, ?string $country = null): ?array
     {
         $response = $this->httpClient->request('GET', 'https://store.steampowered.com/api/appdetails', [
             'query' => [
                 'appids' => $appId,
-                'cc' => $this->storeCountry,
+                'cc' => $country ?? $this->storeCountry,
                 'l' => $this->storeLanguage,
             ],
         ]);

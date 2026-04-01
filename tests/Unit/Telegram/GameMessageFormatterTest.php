@@ -48,6 +48,7 @@ final class GameMessageFormatterTest extends TestCase
             ->setSteamAppId(620)
             ->setSteamName('Portal 2')
             ->setSteamPrice('$9.99')
+            ->setSteamPriceRub('385 pуб.')
             ->setSteamRecentReviewSummary('Крайне положительные (98%, 1 234 отзывов)')
             ->setSteamOverallReviewSummary('Очень положительные (97%, 12 345 отзывов)')
             ->setStatus(GameStatus::NEW);
@@ -59,9 +60,28 @@ final class GameMessageFormatterTest extends TestCase
 
         self::assertStringContainsString('Название в Steam: Portal 2', $formatted['text']);
         self::assertStringContainsString('Steam App ID: 620', $formatted['text']);
-        self::assertStringContainsString('Цена в Steam: $9.99', $formatted['text']);
+        self::assertStringContainsString('Цена в Steam: $9.99 (385 pуб.)', $formatted['text']);
+        self::assertStringNotContainsString('Цена в Steam (RU): 385 pуб.', $formatted['text']);
         self::assertStringContainsString('Недавние отзывы в Steam: Крайне положительные (98%, 1 234 отзывов)', $formatted['text']);
         self::assertStringContainsString('Все отзывы в Steam: Очень положительные (97%, 12 345 отзывов)', $formatted['text']);
+    }
+
+    public function testFormatShowsRubPriceSeparatelyWhenOnlyRubPriceAvailable(): void
+    {
+        $game = (new Game())
+            ->setUrl('https://store.steampowered.com/app/620/Portal_2/')
+            ->setDescriptionText('Описание')
+            ->setDescriptionEntities(null)
+            ->setSteamPriceRub('385 pуб.')
+            ->setStatus(GameStatus::NEW);
+
+        (new \ReflectionProperty($game, 'id'))->setValue($game, 12);
+
+        $formatter = new GameMessageFormatter(new Utf16String());
+        $formatted = $formatter->format($game);
+
+        self::assertStringContainsString('Цена в Steam (RU): 385 pуб.', $formatted['text']);
+        self::assertStringNotContainsString('Цена в Steam: 385 pуб.', $formatted['text']);
     }
 
     public function testFormatListSplitsOnlyBetweenGames(): void
