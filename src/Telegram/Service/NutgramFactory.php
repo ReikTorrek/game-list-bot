@@ -5,9 +5,9 @@ namespace App\Telegram\Service;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
+use App\Telegram\RunningMode\ResilientPolling;
 use SergiX44\Nutgram\Configuration;
 use SergiX44\Nutgram\Nutgram;
-use SergiX44\Nutgram\RunningMode\Polling;
 use SergiX44\Nutgram\RunningMode\Webhook;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -60,7 +60,7 @@ final readonly class NutgramFactory
         $bot = new Nutgram($config['token'], $configuration);
 
         if ($isCli) {
-            $bot->setRunningMode(Polling::class);
+            $bot->setRunningMode(ResilientPolling::class);
         } else {
             $webhook = Webhook::class;
 

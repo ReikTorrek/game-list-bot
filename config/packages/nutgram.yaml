@@ -5,3 +5,4 @@ nutgram:
         botName: '%env(string:TELEGRAM_BOT_NAME)%'
         clientTimeout: '%env(int:TELEGRAM_CLIENT_TIMEOUT)%'
         pollingTimeout: '%env(int:TELEGRAM_POLLING_TIMEOUT)%'
+        enableHttp2: '%env(bool:TELEGRAM_ENABLE_HTTP2)%'

@@ -33,8 +33,9 @@ Strange Brigade — action-adventure / third-person shooter / co-op | РД: не
 TELEGRAM_TOKEN=токен_бота
 TELEGRAM_BOT_NAME=имя_бота_без_собаки
 TELEGRAM_PROXY_URL=http://user:password@host:port
-TELEGRAM_CLIENT_TIMEOUT=65
-TELEGRAM_POLLING_TIMEOUT=50
+TELEGRAM_CLIENT_TIMEOUT=10
+TELEGRAM_POLLING_TIMEOUT=5
+TELEGRAM_ENABLE_HTTP2=0
 DATABASE_URL="postgresql://master:secure123@127.0.0.1:15432/story-teller?serverVersion=16&charset=utf8"
 ```
 
@@ -45,7 +46,9 @@ DATABASE_URL="postgresql://master:secure123@postgres:5432/story-teller?serverVer
 ```
 
 `TELEGRAM_BOT_NAME` нужен для корректной обработки команд вида `/command@your_bot` в группах.
-`TELEGRAM_POLLING_TIMEOUT` задаёт, сколько секунд `getUpdates` ждёт ответ от Telegram в long polling режиме. `TELEGRAM_CLIENT_TIMEOUT` должен быть больше этого значения.
+`TELEGRAM_POLLING_TIMEOUT` задаёт, сколько секунд `getUpdates` ждёт ответ от Telegram в long polling режиме. Для работы через прокси лучше держать его небольшим, например `5`.
+`TELEGRAM_CLIENT_TIMEOUT` должен быть больше `TELEGRAM_POLLING_TIMEOUT`.
+`TELEGRAM_ENABLE_HTTP2=0` отключает HTTP/2. Для HTTPS через прокси это обычно стабильнее.
 
 ## Запуск
 
@@ -135,8 +138,9 @@ docker compose restart bot
    - `TELEGRAM_TOKEN`
    - `TELEGRAM_BOT_NAME`
    - `TELEGRAM_PROXY_URL`, если Telegram с сервера недоступен напрямую
-   - `TELEGRAM_POLLING_TIMEOUT=50`
-   - `TELEGRAM_CLIENT_TIMEOUT=65`
+   - `TELEGRAM_POLLING_TIMEOUT=5`
+   - `TELEGRAM_CLIENT_TIMEOUT=10`
+   - `TELEGRAM_ENABLE_HTTP2=0`
 4. Сделай скрипт исполняемым:
 
 ```bash
