@@ -39,6 +39,31 @@ final class GameMessageFormatterTest extends TestCase
         self::assertSame(0, $formatted['entities'][1]['offset']);
     }
 
+    public function testFormatIncludesSteamMetadataWhenAvailable(): void
+    {
+        $game = (new Game())
+            ->setUrl('https://store.steampowered.com/app/620/Portal_2/')
+            ->setDescriptionText('Описание')
+            ->setDescriptionEntities(null)
+            ->setSteamAppId(620)
+            ->setSteamName('Portal 2')
+            ->setSteamPrice('$9.99')
+            ->setSteamRecentReviewSummary('Крайне положительные (98%, 1 234 отзывов)')
+            ->setSteamOverallReviewSummary('Очень положительные (97%, 12 345 отзывов)')
+            ->setStatus(GameStatus::NEW);
+
+        (new \ReflectionProperty($game, 'id'))->setValue($game, 11);
+
+        $formatter = new GameMessageFormatter(new Utf16String());
+        $formatted = $formatter->format($game);
+
+        self::assertStringContainsString('Название в Steam: Portal 2', $formatted['text']);
+        self::assertStringContainsString('Steam App ID: 620', $formatted['text']);
+        self::assertStringContainsString('Цена в Steam: $9.99', $formatted['text']);
+        self::assertStringContainsString('Недавние отзывы в Steam: Крайне положительные (98%, 1 234 отзывов)', $formatted['text']);
+        self::assertStringContainsString('Все отзывы в Steam: Очень положительные (97%, 12 345 отзывов)', $formatted['text']);
+    }
+
     public function testFormatListSplitsOnlyBetweenGames(): void
     {
         $formatter = new GameMessageFormatter(new Utf16String());

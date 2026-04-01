@@ -12,6 +12,7 @@ Symfony-проект с Telegram-ботом на `Nutgram` и хранением
 - `/done_game {game-id}`: меняет статус на `пройдена`
 - `/drop_game {game-id}`: меняет статус на `брошена`
 - `/delete_game {game-id}`: полностью удаляет игру из БД
+- если ссылка ведёт на `store.steampowered.com/app/...`, бот при добавлении попытается сохранить название игры, `Steam App ID`, цену, недавние отзывы и все отзывы
 
 Описание игры сохраняется вместе с Telegram `entities`, поэтому переносы строк и встроенное форматирование Telegram по возможности восстанавливаются при выдаче списка.
 
@@ -36,6 +37,8 @@ TELEGRAM_PROXY_URL=http://user:password@host:port
 TELEGRAM_CLIENT_TIMEOUT=10
 TELEGRAM_POLLING_TIMEOUT=5
 TELEGRAM_ENABLE_HTTP2=0
+STEAM_STORE_COUNTRY=us
+STEAM_STORE_LANGUAGE=russian
 DATABASE_URL="postgresql://master:secure123@127.0.0.1:15432/story-teller?serverVersion=16&charset=utf8"
 ```
 
@@ -49,6 +52,21 @@ DATABASE_URL="postgresql://master:secure123@postgres:5432/story-teller?serverVer
 `TELEGRAM_POLLING_TIMEOUT` задаёт, сколько секунд `getUpdates` ждёт ответ от Telegram в long polling режиме. Для работы через прокси лучше держать его небольшим, например `5`.
 `TELEGRAM_CLIENT_TIMEOUT` должен быть больше `TELEGRAM_POLLING_TIMEOUT`.
 `TELEGRAM_ENABLE_HTTP2=0` отключает HTTP/2. Для HTTPS через прокси это обычно стабильнее.
+`STEAM_STORE_COUNTRY` определяет регион магазина для цены. `STEAM_STORE_LANGUAGE` влияет на язык review summary от Steam.
+
+## Обновление Steam-данных у уже сохранённых игр
+
+Обновить одну игру по ID:
+
+```bash
+php bin/console app:refresh-steam-metadata --id=12 --env=prod
+```
+
+Обновить все игры со Steam-ссылками:
+
+```bash
+php bin/console app:refresh-steam-metadata --all-steam --env=prod
+```
 
 ## Запуск
 

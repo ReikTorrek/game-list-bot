@@ -15,6 +15,7 @@ final readonly class GameBotHandler
         private GameRepository $gameRepository,
         private GameMessageParser $gameMessageParser,
         private GameMessageFormatter $gameMessageFormatter,
+        private SteamMetadataUpdater $steamMetadataUpdater,
     ) {
     }
 
@@ -30,6 +31,7 @@ final readonly class GameBotHandler
             '/done_game {game-id} - отметить игру как пройденную',
             '/drop_game {game-id} - отметить игру как брошенную',
             '/delete_game {game-id} - удалить игру из базы',
+            'Если ссылка ведёт на Steam, бот попытается сам сохранить цену и недавние/все отзывы.',
             'Команды с параметрами не регистрируются в меню Telegram специально, чтобы не отправляться случайно без параметров.',
         ]));
     }
@@ -62,6 +64,8 @@ final readonly class GameBotHandler
                 ->setDescriptionText($parsedGame->descriptionText)
                 ->setDescriptionEntities($parsedGame->descriptionEntities)
                 ->setStatus(GameStatus::NEW);
+
+            $this->steamMetadataUpdater->refresh($game);
 
             $this->entityManager->persist($game);
             $addedGames[] = $game;

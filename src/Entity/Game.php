@@ -25,6 +25,21 @@ class Game
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $descriptionEntities = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $steamAppId = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $steamName = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $steamPrice = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $steamRecentReviewSummary = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $steamOverallReviewSummary = null;
+
     #[ORM\Column(length: 20, enumType: GameStatus::class)]
     private GameStatus $status = GameStatus::NEW;
 
@@ -78,6 +93,66 @@ class Game
     public function setDescriptionEntities(?array $descriptionEntities): self
     {
         $this->descriptionEntities = $descriptionEntities;
+
+        return $this;
+    }
+
+    public function getSteamAppId(): ?int
+    {
+        return $this->steamAppId;
+    }
+
+    public function setSteamAppId(?int $steamAppId): self
+    {
+        $this->steamAppId = $steamAppId;
+
+        return $this;
+    }
+
+    public function getSteamName(): ?string
+    {
+        return $this->steamName;
+    }
+
+    public function setSteamName(?string $steamName): self
+    {
+        $this->steamName = $steamName;
+
+        return $this;
+    }
+
+    public function getSteamPrice(): ?string
+    {
+        return $this->steamPrice;
+    }
+
+    public function setSteamPrice(?string $steamPrice): self
+    {
+        $this->steamPrice = $steamPrice;
+
+        return $this;
+    }
+
+    public function getSteamRecentReviewSummary(): ?string
+    {
+        return $this->steamRecentReviewSummary;
+    }
+
+    public function setSteamRecentReviewSummary(?string $steamRecentReviewSummary): self
+    {
+        $this->steamRecentReviewSummary = $steamRecentReviewSummary;
+
+        return $this;
+    }
+
+    public function getSteamOverallReviewSummary(): ?string
+    {
+        return $this->steamOverallReviewSummary;
+    }
+
+    public function setSteamOverallReviewSummary(?string $steamOverallReviewSummary): self
+    {
+        $this->steamOverallReviewSummary = $steamOverallReviewSummary;
 
         return $this;
     }

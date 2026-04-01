@@ -24,12 +24,33 @@ final readonly class GameMessageFormatter
             throw new \LogicException('Game ID must be available before formatting.');
         }
 
-        $prefix = sprintf(
-            "Игра #%d\nСтатус: %s\nСсылка: %s\n\nОписание:\n",
-            $id,
-            $game->getStatus()->label(),
-            $game->getUrl(),
-        );
+        $prefixLines = [
+            sprintf('Игра #%d', $id),
+            sprintf('Статус: %s', $game->getStatus()->label()),
+            sprintf('Ссылка: %s', $game->getUrl()),
+        ];
+
+        if ($game->getSteamName() !== null) {
+            $prefixLines[] = sprintf('Название в Steam: %s', $game->getSteamName());
+        }
+
+        if ($game->getSteamAppId() !== null) {
+            $prefixLines[] = sprintf('Steam App ID: %d', $game->getSteamAppId());
+        }
+
+        if ($game->getSteamPrice() !== null) {
+            $prefixLines[] = sprintf('Цена в Steam: %s', $game->getSteamPrice());
+        }
+
+        if ($game->getSteamRecentReviewSummary() !== null) {
+            $prefixLines[] = sprintf('Недавние отзывы в Steam: %s', $game->getSteamRecentReviewSummary());
+        }
+
+        if ($game->getSteamOverallReviewSummary() !== null) {
+            $prefixLines[] = sprintf('Все отзывы в Steam: %s', $game->getSteamOverallReviewSummary());
+        }
+
+        $prefix = implode("\n", $prefixLines) . "\n\nОписание:\n";
 
         $shift = $this->utf16String->length($prefix);
         $entities = [];
