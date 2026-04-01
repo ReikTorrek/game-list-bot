@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="7501cdae-2372-4882-96bb-faa814497f55" name="reik-server">
+        <fileTransfer rootFolder="/var/www" accessType="SFTP" host="91.214.240.166" port="2222" sshConfigId="d2eb6a5a-adcd-426d-8a06-51ba61bf89ec" sshConfig="reikserver@91.214.240.166:2222 agent" authAgent="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

@@ -110,6 +110,69 @@ docker compose ps
 docker compose restart bot
 ```
 
+## Деплой без Docker
+
+Если сервер слабый, можно разворачивать проект как обычное PHP CLI-приложение без контейнеров. Для этого в репозиторий добавлен скрипт [scripts/deploy.sh](/home/reik/projects/php/game-list-bot/scripts/deploy.sh).
+
+Что должно быть на сервере заранее:
+
+- `php` 8.2+
+- `composer`
+- `postgresql`
+- расширения PHP `pdo_pgsql`, `pgsql`, `mbstring`, `xml`, `curl`, `intl`, `zip`
+- настроенный `.env.local`
+
+Подготовка:
+
+1. Клонируй репозиторий.
+2. Создай `.env.local` на основе [.env.local.example](/home/reik/projects/php/game-list-bot/.env.local.example).
+3. Пропиши production-значения:
+   - `APP_ENV=prod`
+   - `APP_DEBUG=0`
+   - `DATABASE_URL`, который указывает на локальный PostgreSQL
+   - `TELEGRAM_TOKEN`
+   - `TELEGRAM_BOT_NAME`
+   - `TELEGRAM_PROXY_URL`, если Telegram с сервера недоступен напрямую
+4. Сделай скрипт исполняемым:
+
+```bash
+chmod +x scripts/deploy.sh
+```
+
+Обычный деплой после `git pull`:
+
+```bash
+./scripts/deploy.sh
+```
+
+Что делает скрипт:
+
+- запускает `composer install --no-dev`
+- применяет миграции `Doctrine`
+- очищает и прогревает кэш Symfony
+- регистрирует команды Telegram через `nutgram:register-commands`
+
+Если бот запущен как `systemd`-сервис, можно сразу перезапустить его тем же скриптом:
+
+```bash
+./scripts/deploy.sh --service game-list-bot
+```
+
+Если перезапуск нужен позже:
+
+```bash
+sudo systemctl restart game-list-bot
+sudo systemctl status game-list-bot
+```
+
+Шаблон `systemd`-юнита лежит в [deploy/game-list-bot.service.example](/home/reik/projects/php/game-list-bot/deploy/game-list-bot.service.example). Скопируй его в `/etc/systemd/system/game-list-bot.service`, подставь своего пользователя и путь к проекту, затем выполни:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable game-list-bot
+sudo systemctl start game-list-bot
+```
+
 ## Debug
 
 В проекте уже включён `Xdebug` для PHP-контейнера.

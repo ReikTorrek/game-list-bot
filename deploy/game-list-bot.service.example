@@ -1,0 +1,16 @@
+[Unit]
+Description=Telegram Game List Bot
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=CHANGE_ME
+Group=CHANGE_ME
+WorkingDirectory=CHANGE_ME
+ExecStart=/usr/bin/php CHANGE_ME/bin/console nutgram:run --env=prod
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
