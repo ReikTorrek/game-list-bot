@@ -1,0 +1,181 @@
+# Game List Bot
+
+Symfony-проект с Telegram-ботом на `Nutgram` и хранением игр в PostgreSQL через `Doctrine`.
+
+## Что умеет бот
+
+- `/add_game {ссылка} {описание}`: добавляет игру в БД
+- `/add_game` также может добавить несколько игр сразу, если после команды передать несколько блоков `ссылка + описание`, разделённых пустой строкой
+- `/get_games`: показывает игры со статусом `новая`
+- `/get_done_games`: показывает игры со статусом `пройдена`
+- `/get_dropped_games`: показывает игры со статусом `брошена`
+- `/done_game {game-id}`: меняет статус на `пройдена`
+- `/drop_game {game-id}`: меняет статус на `брошена`
+- `/delete_game {game-id}`: полностью удаляет игру из БД
+
+Описание игры сохраняется вместе с Telegram `entities`, поэтому переносы строк и встроенное форматирование Telegram по возможности восстанавливаются при выдаче списка.
+
+Пример пакетного добавления:
+
+```text
+/add_game https://store.steampowered.com/app/2956680/LORT/
+LORT — action roguelike / third-person shooter / looter-shooter | РД: да | стиль: стилизованная гротескная 3D | год: 2026 | сеттинг: проклятый фэнтези-мир.
+
+https://store.steampowered.com/app/312670/?snr=1_5_9__205
+Strange Brigade — action-adventure / third-person shooter / co-op | РД: нет | стиль: pulp-приключение, полу-реалистичная 3D | год: 2018 | сеттинг: Египет 1930-х, оккультизм и мифологические руины.
+```
+
+## Настройка
+
+Заполни в `.env.local`:
+
+```dotenv
+TELEGRAM_TOKEN=токен_бота
+TELEGRAM_BOT_NAME=имя_бота_без_собаки
+TELEGRAM_PROXY_URL=http://user:password@host:port
+TELEGRAM_CLIENT_TIMEOUT=20
+DATABASE_URL="postgresql://master:secure123@127.0.0.1:15432/story-teller?serverVersion=16&charset=utf8"
+```
+
+Если запускаешь внутри контейнера `php`:
+
+```dotenv
+DATABASE_URL="postgresql://master:secure123@postgres:5432/story-teller?serverVersion=16&charset=utf8"
+```
+
+`TELEGRAM_BOT_NAME` нужен для корректной обработки команд вида `/command@your_bot` в группах.
+
+## Запуск
+
+Поднять контейнеры:
+
+```bash
+docker compose up -d
+```
+
+Применить миграции:
+
+```bash
+docker compose exec php php bin/console doctrine:migrations:migrate -n
+```
+
+Зарегистрировать команды в Telegram:
+
+```bash
+docker compose exec php php bin/console nutgram:register-commands
+```
+
+Запустить бота в long polling:
+
+```bash
+docker compose exec php php bin/console nutgram:run
+```
+
+В меню Telegram регистрируются только команды без параметров. Команды `/add_game`, `/done_game`, `/drop_game`, `/delete_game` нужно вводить руками вместе с параметрами. Это сделано специально, чтобы Telegram не отправлял их случайно пустыми при выборе из меню.
+
+## Сервер
+
+Для домашнего сервера без домена и HTTPS используй `long polling`, а не webhook. В проект уже добавлен отдельный docker-сервис `bot`, который крутит `nutgram:run`.
+
+Подготовка:
+
+1. Клонируй репозиторий на сервер.
+2. Создай `.env.local` на основе [.env.local.example](/home/reik/projects/php/game-list-bot/.env.local.example).
+3. Укажи production-значения:
+   - `APP_ENV=prod`
+   - `APP_DEBUG=0`
+   - `TELEGRAM_TOKEN`
+   - `TELEGRAM_BOT_NAME`
+   - `TELEGRAM_PROXY_URL`, если нужен прокси
+4. Собери и подними контейнеры:
+
+```bash
+docker compose --profile bot up -d --build
+```
+
+5. Один раз выполни миграции и регистрацию команд:
+
+```bash
+docker compose exec php php bin/console doctrine:migrations:migrate -n --env=prod
+docker compose exec php php bin/console nutgram:register-commands --env=prod
+```
+
+После этого бот будет работать через отдельный контейнер `bot` и переживать перезапуск Docker благодаря `restart: unless-stopped`.
+
+Полезные команды на сервере:
+
+```bash
+docker compose logs -f bot
+docker compose ps
+docker compose restart bot
+```
+
+## Debug
+
+В проекте уже включён `Xdebug` для PHP-контейнера.
+
+После изменения `docker-compose.yml` контейнер `php` нужно пересобрать:
+
+```bash
+docker compose up -d --build php
+```
+
+### PhpStorm
+
+1. Открой `Settings -> PHP`.
+2. Добавь интерпретатор `From Docker Compose`.
+3. Выбери сервис `php`.
+4. Открой `Settings -> PHP -> Servers`.
+5. Добавь сервер:
+   - `Name`: `game-list-bot`
+   - `Host`: `localhost`
+   - `Port`: `8080`
+   - `Debugger`: `Xdebug`
+   - включи `Use path mappings`
+   - сопоставь путь проекта с `/var/www/app`
+6. Нажми `Start Listening for PHP Debug Connections`.
+
+### Как дебажить команды
+
+CLI-команды будут автоматически стартовать Xdebug, потому что в контейнере включён `xdebug.start_with_request=yes`.
+
+Для отладки команд запускай их так:
+
+```bash
+docker compose exec php php bin/console nutgram:register-commands
+docker compose exec php php bin/console nutgram:run
+```
+
+Ставь breakpoint, например, в:
+
+- `src/Telegram/Service/GameBotHandler.php`
+- `src/Telegram/Service/GameMessageParser.php`
+- `config/telegram.php`
+
+Если IDE не ловит соединение, проверь лог Xdebug:
+
+```bash
+docker compose exec php cat /tmp/xdebug.log
+```
+
+## PostgreSQL
+
+Подключение с хоста:
+
+- `Host`: `127.0.0.1`
+- `Port`: `15432`
+- `Database`: `story-teller`
+- `User`: `master`
+- `Password`: `secure123`
+
+URL для IDE / клиента:
+
+```text
+postgresql://master:secure123@127.0.0.1:15432/story-teller
+```
+
+Подключение из контейнера `php`:
+
+```text
+postgresql://master:secure123@postgres:5432/story-teller
+```

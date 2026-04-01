@@ -1,0 +1,6 @@
+nutgram:
+    token: '%env(string:TELEGRAM_TOKEN)%'
+    routes: true
+    config:
+        botName: '%env(string:TELEGRAM_BOT_NAME)%'
+        clientTimeout: '%env(int:TELEGRAM_CLIENT_TIMEOUT)%'
