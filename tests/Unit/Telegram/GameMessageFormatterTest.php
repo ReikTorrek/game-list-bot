@@ -115,4 +115,32 @@ final class GameMessageFormatterTest extends TestCase
         self::assertSame('blockquote', $chunks[0]['entities'][0]['type']);
         self::assertSame('blockquote', $chunks[1]['entities'][0]['type']);
     }
+
+    public function testFormatListSplitsOversizedSingleGameIntoMultipleChunks(): void
+    {
+        $formatter = new GameMessageFormatter(new Utf16String());
+        $utf16String = new Utf16String();
+
+        $game = (new Game())
+            ->setUrl('https://example.com/game-1')
+            ->setDescriptionText(str_repeat("Очень длинное описание игры\n", 300))
+            ->setDescriptionEntities(null)
+            ->setStatus(GameStatus::NEW);
+
+        (new \ReflectionProperty($game, 'id'))->setValue($game, 1);
+
+        $chunks = $formatter->formatList(
+            [$game],
+            'Найдено игр со статусом "новая": 1'
+        );
+
+        self::assertGreaterThan(1, count($chunks));
+
+        foreach ($chunks as $chunk) {
+            self::assertLessThanOrEqual(4096, $utf16String->length($chunk['text']));
+        }
+
+        self::assertStringContainsString('Найдено игр со статусом "новая": 1', $chunks[0]['text']);
+        self::assertStringContainsString('Игра #1', implode("\n", array_column($chunks, 'text')));
+    }
 }

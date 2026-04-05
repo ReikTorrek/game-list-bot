@@ -154,6 +154,105 @@ final readonly class GameMessageFormatter
             ];
         }
 
-        return $chunks;
+        return $this->splitOversizedChunks($chunks);
+    }
+
+    /**
+     * @param list<array{text: string, entities: list<array<string, mixed>>}> $chunks
+     * @return list<array{text: string, entities: list<array<string, mixed>>}>
+     */
+    private function splitOversizedChunks(array $chunks): array
+    {
+        $result = [];
+
+        foreach ($chunks as $chunk) {
+            if ($this->utf16String->length($chunk['text']) <= self::TELEGRAM_TEXT_LIMIT) {
+                $result[] = $chunk;
+                continue;
+            }
+
+            foreach ($this->splitPlainText($chunk['text']) as $textPart) {
+                $result[] = [
+                    'text' => $textPart,
+                    'entities' => [],
+                ];
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function splitPlainText(string $text): array
+    {
+        $parts = [];
+        $remaining = $text;
+
+        while ($remaining !== '') {
+            if ($this->utf16String->length($remaining) <= self::TELEGRAM_TEXT_LIMIT) {
+                $parts[] = $remaining;
+                break;
+            }
+
+            $prefix = $this->sliceByUtf16Length($remaining, self::TELEGRAM_TEXT_LIMIT);
+            $splitPosition = $this->findPreferredSplitPosition($prefix);
+
+            if ($splitPosition === null || $splitPosition <= 0) {
+                $splitPosition = mb_strlen($prefix);
+            }
+
+            $part = rtrim(mb_substr($remaining, 0, $splitPosition));
+
+            if ($part === '') {
+                $part = $prefix;
+                $splitPosition = mb_strlen($prefix);
+            }
+
+            $parts[] = $part;
+            $remaining = ltrim(mb_substr($remaining, $splitPosition));
+        }
+
+        return $parts;
+    }
+
+    private function sliceByUtf16Length(string $text, int $maxLength): string
+    {
+        $textLength = mb_strlen($text);
+        $low = 0;
+        $high = $textLength;
+        $best = '';
+
+        while ($low <= $high) {
+            $mid = (int) floor(($low + $high) / 2);
+            $candidate = mb_substr($text, 0, $mid);
+            $candidateLength = $this->utf16String->length($candidate);
+
+            if ($candidateLength <= $maxLength) {
+                $best = $candidate;
+                $low = $mid + 1;
+                continue;
+            }
+
+            $high = $mid - 1;
+        }
+
+        return $best;
+    }
+
+    private function findPreferredSplitPosition(string $text): ?int
+    {
+        $minimumPosition = max(1, (int) floor(mb_strlen($text) / 2));
+
+        foreach (["\n\n", "\n", ' '] as $separator) {
+            $position = mb_strrpos($text, $separator);
+
+            if ($position !== false && $position >= $minimumPosition) {
+                return $position;
+            }
+        }
+
+        return null;
     }
 }
