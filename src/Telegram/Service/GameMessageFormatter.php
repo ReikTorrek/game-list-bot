@@ -171,11 +171,8 @@ final readonly class GameMessageFormatter
                 continue;
             }
 
-            foreach ($this->splitPlainText($chunk['text']) as $textPart) {
-                $result[] = [
-                    'text' => $textPart,
-                    'entities' => [],
-                ];
+            foreach ($this->splitFormattedChunk($chunk) as $chunkPart) {
+                $result[] = $chunkPart;
             }
         }
 
@@ -183,35 +180,43 @@ final readonly class GameMessageFormatter
     }
 
     /**
-     * @return list<string>
+     * @param array{text: string, entities: list<array<string, mixed>>} $chunk
+     * @return list<array{text: string, entities: list<array<string, mixed>>}>
      */
-    private function splitPlainText(string $text): array
+    private function splitFormattedChunk(array $chunk): array
     {
         $parts = [];
-        $remaining = $text;
+        $remainingText = $chunk['text'];
+        $remainingEntities = $chunk['entities'];
 
-        while ($remaining !== '') {
-            if ($this->utf16String->length($remaining) <= self::TELEGRAM_TEXT_LIMIT) {
-                $parts[] = $remaining;
+        while ($remainingText !== '') {
+            $remainingLength = $this->utf16String->length($remainingText);
+
+            if ($remainingLength <= self::TELEGRAM_TEXT_LIMIT) {
+                $parts[] = [
+                    'text' => $remainingText,
+                    'entities' => $remainingEntities,
+                ];
                 break;
             }
 
-            $prefix = $this->sliceByUtf16Length($remaining, self::TELEGRAM_TEXT_LIMIT);
-            $splitPosition = $this->findPreferredSplitPosition($prefix);
+            $prefix = $this->sliceByUtf16Length($remainingText, self::TELEGRAM_TEXT_LIMIT);
+            $splitPosition = $this->findPreferredSplitPosition($prefix) ?? mb_strlen($prefix);
 
-            if ($splitPosition === null || $splitPosition <= 0) {
+            if ($splitPosition <= 0) {
                 $splitPosition = mb_strlen($prefix);
             }
 
-            $part = rtrim(mb_substr($remaining, 0, $splitPosition));
+            $partText = mb_substr($remainingText, 0, $splitPosition);
+            $partLength = $this->utf16String->length($partText);
 
-            if ($part === '') {
-                $part = $prefix;
-                $splitPosition = mb_strlen($prefix);
-            }
+            $parts[] = [
+                'text' => $partText,
+                'entities' => $this->sliceEntities($remainingEntities, 0, $partLength),
+            ];
 
-            $parts[] = $part;
-            $remaining = ltrim(mb_substr($remaining, $splitPosition));
+            $remainingText = mb_substr($remainingText, $splitPosition);
+            $remainingEntities = $this->shiftEntities($remainingEntities, $partLength);
         }
 
         return $parts;
@@ -249,10 +254,73 @@ final readonly class GameMessageFormatter
             $position = mb_strrpos($text, $separator);
 
             if ($position !== false && $position >= $minimumPosition) {
-                return $position;
+                return $position + mb_strlen($separator);
             }
         }
 
         return null;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $entities
+     * @return list<array<string, mixed>>
+     */
+    private function sliceEntities(array $entities, int $start, int $length): array
+    {
+        $end = $start + $length;
+        $result = [];
+
+        foreach ($entities as $entity) {
+            $offset = $entity['offset'] ?? null;
+            $entityLength = $entity['length'] ?? null;
+
+            if (!is_int($offset) || !is_int($entityLength)) {
+                continue;
+            }
+
+            $entityEnd = $offset + $entityLength;
+            $sliceStart = max($offset, $start);
+            $sliceEnd = min($entityEnd, $end);
+
+            if ($sliceStart >= $sliceEnd) {
+                continue;
+            }
+
+            $entity['offset'] = $sliceStart - $start;
+            $entity['length'] = $sliceEnd - $sliceStart;
+            $result[] = $entity;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $entities
+     * @return list<array<string, mixed>>
+     */
+    private function shiftEntities(array $entities, int $shift): array
+    {
+        $result = [];
+
+        foreach ($entities as $entity) {
+            $offset = $entity['offset'] ?? null;
+            $length = $entity['length'] ?? null;
+
+            if (!is_int($offset) || !is_int($length)) {
+                continue;
+            }
+
+            $entityEnd = $offset + $length;
+
+            if ($entityEnd <= $shift) {
+                continue;
+            }
+
+            $entity['offset'] = max(0, $offset - $shift);
+            $entity['length'] = $entityEnd - max($offset, $shift);
+            $result[] = $entity;
+        }
+
+        return $result;
     }
 }

@@ -138,6 +138,8 @@ final class GameMessageFormatterTest extends TestCase
 
         foreach ($chunks as $chunk) {
             self::assertLessThanOrEqual(4096, $utf16String->length($chunk['text']));
+            self::assertNotEmpty($chunk['entities']);
+            self::assertSame('blockquote', $chunk['entities'][0]['type']);
         }
 
         self::assertStringContainsString('Найдено игр со статусом "новая": 1', $chunks[0]['text']);

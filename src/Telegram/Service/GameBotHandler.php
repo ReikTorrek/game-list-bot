@@ -252,12 +252,7 @@ final readonly class GameBotHandler
         );
 
         foreach ($chunks as $chunk) {
-            try {
-                $bot->sendMessage($chunk['text'], entities: $chunk['entities']);
-            } catch (\Throwable) {
-                $bot->sendMessage($chunk['text']);
-            }
-
+            $bot->sendMessage($chunk['text'], entities: $chunk['entities']);
             usleep(100_000);
         }
     }
