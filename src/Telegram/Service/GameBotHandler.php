@@ -5,6 +5,7 @@ namespace App\Telegram\Service;
 use App\Entity\Game;
 use App\Enum\GameStatus;
 use App\Repository\GameRepository;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use SergiX44\Nutgram\Nutgram;
 
@@ -16,6 +17,7 @@ final readonly class GameBotHandler
         private GameMessageParser $gameMessageParser,
         private GameMessageFormatter $gameMessageFormatter,
         private GameTitleFinder $gameTitleFinder,
+        private SteamStoreClient $steamStoreClient,
         private SteamMetadataUpdater $steamMetadataUpdater,
     ) {
     }
@@ -91,15 +93,28 @@ final readonly class GameBotHandler
                 ->setUrl($parsedGame->url)
                 ->setDescriptionText($parsedGame->descriptionText)
                 ->setDescriptionEntities($parsedGame->descriptionEntities)
+                ->setSteamAppId($this->steamStoreClient->extractAppId($parsedGame->url))
                 ->setStatus(GameStatus::NEW);
 
             $this->steamMetadataUpdater->refresh($game);
+
+            $duplicateMessage = $this->buildSteamDuplicateMessage($game, $addedGames);
+
+            if ($duplicateMessage !== null) {
+                $bot->sendMessage($duplicateMessage);
+                return;
+            }
 
             $this->entityManager->persist($game);
             $addedGames[] = $game;
         }
 
-        $this->entityManager->flush();
+        try {
+            $this->entityManager->flush();
+        } catch (UniqueConstraintViolationException) {
+            $bot->sendMessage('Не удалось добавить игру: игра с таким Steam App ID уже есть в базе.');
+            return;
+        }
 
         if (count($addedGames) === 1) {
             $bot->sendMessage(sprintf('Игра добавлена с ID %d.', $addedGames[0]->getId()));
@@ -113,6 +128,42 @@ final readonly class GameBotHandler
         }
 
         $bot->sendMessage(implode("\n", $lines));
+    }
+
+    /**
+     * @param list<Game> $pendingGames
+     */
+    private function buildSteamDuplicateMessage(Game $game, array $pendingGames): ?string
+    {
+        $steamAppId = $game->getSteamAppId();
+
+        if ($steamAppId === null) {
+            return null;
+        }
+
+        foreach ($pendingGames as $pendingGame) {
+            if ($pendingGame->getSteamAppId() !== $steamAppId) {
+                continue;
+            }
+
+            return sprintf(
+                'Игра со Steam App ID %d уже есть в текущем списке на добавление: %s',
+                $steamAppId,
+                $pendingGame->getUrl(),
+            );
+        }
+
+        $existingGame = $this->gameRepository->findOneBySteamAppId($steamAppId);
+
+        if (!$existingGame instanceof Game) {
+            return null;
+        }
+
+        $existingId = $existingGame->getId();
+
+        return $existingId === null
+            ? sprintf('Игра со Steam App ID %d уже есть в базе.', $steamAppId)
+            : sprintf('Игра со Steam App ID %d уже есть в базе как #%d.', $steamAppId, $existingId);
     }
 
     public function getGames(Nutgram $bot): void

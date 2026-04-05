@@ -25,7 +25,7 @@ class Game
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $descriptionEntities = null;
 
-    #[ORM\Column(nullable: true)]
+    #[ORM\Column(nullable: true, unique: true)]
     private ?int $steamAppId = null;
 
     #[ORM\Column(length: 255, nullable: true)]

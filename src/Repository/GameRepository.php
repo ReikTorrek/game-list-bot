@@ -29,4 +29,14 @@ class GameRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    public function findOneBySteamAppId(int $steamAppId): ?Game
+    {
+        return $this->createQueryBuilder('g')
+            ->andWhere('g.steamAppId = :steamAppId')
+            ->setParameter('steamAppId', $steamAppId)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }
