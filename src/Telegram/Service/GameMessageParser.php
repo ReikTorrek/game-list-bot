@@ -85,17 +85,30 @@ final readonly class GameMessageParser
 
     public function parseGameIdArgument(?string $text, string $command): ?int
     {
+        $argument = $this->parseCommandArgument($text, $command);
+
+        if ($argument === null || !preg_match('/^\d+$/', $argument)) {
+            return null;
+        }
+
+        return (int) $argument;
+    }
+
+    public function parseCommandArgument(?string $text, string $command): ?string
+    {
         if (!is_string($text)) {
             return null;
         }
 
-        $pattern = sprintf('/^\/%s(?:@\w+)?\s+(?<id>\d+)\s*$/u', preg_quote($command, '/'));
+        $pattern = sprintf('/^\/%s(?:@\w+)?\s+(?<argument>[\s\S]+)$/u', preg_quote($command, '/'));
 
         if (!preg_match($pattern, $text, $matches)) {
             return null;
         }
 
-        return (int) $matches['id'];
+        $argument = trim($matches['argument']);
+
+        return $argument !== '' ? $argument : null;
     }
 
     /**

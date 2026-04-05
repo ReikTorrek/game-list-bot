@@ -113,4 +113,15 @@ final class GameMessageParserTest extends TestCase
         self::assertNull($parser->parseGameIdArgument('/done_game abc', 'done_game'));
         self::assertNull($parser->parseGameIdArgument('/done_game 12 extra', 'done_game'));
     }
+
+    public function testParseCommandArgument(): void
+    {
+        $parser = new GameMessageParser(new Utf16String());
+
+        self::assertSame('Portal 2', $parser->parseCommandArgument('/find_game Portal 2', 'find_game'));
+        self::assertSame('Portal 2', $parser->parseCommandArgument('/find_game   Portal 2  ', 'find_game'));
+        self::assertSame('Portal 2', $parser->parseCommandArgument('/find_game@anythingForImperrorGameListBot Portal 2', 'find_game'));
+        self::assertNull($parser->parseCommandArgument('/find_game', 'find_game'));
+        self::assertNull($parser->parseCommandArgument('/find_game    ', 'find_game'));
+    }
 }

@@ -9,6 +9,7 @@ Symfony-проект с Telegram-ботом на `Nutgram` и хранением
 - `/get_games`: показывает игры со статусом `новая`
 - `/get_done_games`: показывает игры со статусом `пройдена`
 - `/get_dropped_games`: показывает игры со статусом `брошена`
+- `/find_game {название}`: ищет одну игру по названию, без учёта регистра и с допуском к небольшим опечаткам
 - `/done_game {game-id}`: меняет статус на `пройдена`
 - `/drop_game {game-id}`: меняет статус на `брошена`
 - `/delete_game {game-id}`: полностью удаляет игру из БД
@@ -94,7 +95,7 @@ docker compose exec php php bin/console nutgram:register-commands
 docker compose exec php php bin/console nutgram:run
 ```
 
-В меню Telegram регистрируются только команды без параметров. Команды `/add_game`, `/add_games`, `/done_game`, `/drop_game`, `/delete_game` нужно вводить руками вместе с параметрами. Это сделано специально, чтобы Telegram не отправлял их случайно пустыми при выборе из меню.
+В меню Telegram регистрируются только команды без параметров. Команды `/add_game`, `/add_games`, `/find_game`, `/done_game`, `/drop_game`, `/delete_game` нужно вводить руками вместе с параметрами. Это сделано специально, чтобы Telegram не отправлял их случайно пустыми при выборе из меню.
 
 ## Сервер
 

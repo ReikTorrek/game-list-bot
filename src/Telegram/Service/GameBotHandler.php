@@ -15,6 +15,7 @@ final readonly class GameBotHandler
         private GameRepository $gameRepository,
         private GameMessageParser $gameMessageParser,
         private GameMessageFormatter $gameMessageFormatter,
+        private GameTitleFinder $gameTitleFinder,
         private SteamMetadataUpdater $steamMetadataUpdater,
     ) {
     }
@@ -28,6 +29,7 @@ final readonly class GameBotHandler
             '/get_games - список новых игр',
             '/get_done_games - список пройденных игр',
             '/get_dropped_games - список брошенных игр',
+            '/find_game {название} - найти одну игру по названию, даже с небольшой опечаткой',
             '/done_game {game-id} - отметить игру как пройденную',
             '/drop_game {game-id} - отметить игру как брошенную',
             '/delete_game {game-id} - удалить игру из базы',
@@ -128,6 +130,26 @@ final readonly class GameBotHandler
         $this->sendGamesByStatus($bot, GameStatus::DROPPED);
     }
 
+    public function findGame(Nutgram $bot): void
+    {
+        $query = $this->gameMessageParser->parseCommandArgument($bot->message()?->text, 'find_game');
+
+        if ($query === null) {
+            $bot->sendMessage("Неверный формат.\nИспользуй:\n/find_game Название игры");
+            return;
+        }
+
+        $game = $this->gameTitleFinder->findBestMatch($query);
+
+        if (!$game instanceof Game) {
+            $bot->sendMessage(sprintf('Не удалось найти игру по запросу "%s".', $query));
+            return;
+        }
+
+        $formatted = $this->gameMessageFormatter->format($game);
+        $bot->sendMessage($formatted['text'], entities: $formatted['entities']);
+    }
+
     public function doneGame(Nutgram $bot): void
     {
         $gameId = $this->gameMessageParser->parseGameIdArgument($bot->message()?->text, 'done_game');
@@ -180,6 +202,7 @@ final readonly class GameBotHandler
 
         foreach ($chunks as $chunk) {
             $bot->sendMessage($chunk['text'], entities: $chunk['entities']);
+            usleep(100);
         }
     }
 
