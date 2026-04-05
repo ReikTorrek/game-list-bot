@@ -21,6 +21,11 @@ $bot->onCommand('add_game', [$handler, 'addGame']);
 $bot->onText('/add_game{suffix}', [$handler, 'addGame'])
     ->where('suffix', '(?:@\\w+)(?:\\s+.+)?|(?:\\s+.+)');
 
+$bot->onCommand('add_games', [$handler, 'addGames']);
+
+$bot->onText('/add_games{suffix}', [$handler, 'addGames'])
+    ->where('suffix', '(?:@\\w+)(?:\\s+.+)?|(?:\\s+.+)');
+
 $bot->onCommand('get_games', [$handler, 'getGames'])
     ->description('Показать новые игры');
 

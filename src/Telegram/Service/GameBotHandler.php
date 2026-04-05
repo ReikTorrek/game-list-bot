@@ -24,7 +24,7 @@ final readonly class GameBotHandler
         $bot->sendMessage(implode("\n", [
             'Доступные команды:',
             '/add_game {ссылка} {описание} - добавить одну игру',
-            '/add_game + несколько блоков "ссылка + описание" через пустую строку - добавить несколько игр',
+            '/add_games + несколько блоков "ссылка + описание" через пустую строку - добавить несколько игр',
             '/get_games - список новых игр',
             '/get_done_games - список пройденных игр',
             '/get_dropped_games - список брошенных игр',
@@ -44,13 +44,39 @@ final readonly class GameBotHandler
             return;
         }
 
-        $parsedGames = $this->gameMessageParser->parseAddGames($message);
+        $parsedGame = $this->gameMessageParser->parseAddGame($message);
 
-        if ($parsedGames === null) {
-            $bot->sendMessage("Неверный формат.\nИспользуй:\n/add_game https://example.com Описание игры\n\nИли несколько игр блоками:\nhttps://example.com/game-1\nОписание 1\n\nhttps://example.com/game-2\nОписание 2");
+        if ($parsedGame === null) {
+            $bot->sendMessage("Неверный формат.\nИспользуй:\n/add_game https://example.com Описание игры");
             return;
         }
 
+        $this->addParsedGames($bot, [$parsedGame]);
+    }
+
+    public function addGames(Nutgram $bot): void
+    {
+        $message = $bot->message();
+
+        if ($message === null) {
+            return;
+        }
+
+        $parsedGames = $this->gameMessageParser->parseAddGames($message);
+
+        if ($parsedGames === null) {
+            $bot->sendMessage("Неверный формат.\nИспользуй:\n/add_games https://example.com/game-1 Описание 1\n\nhttps://example.com/game-2 Описание 2");
+            return;
+        }
+
+        $this->addParsedGames($bot, $parsedGames);
+    }
+
+    /**
+     * @param list<\App\Telegram\Dto\ParsedGameMessage> $parsedGames
+     */
+    private function addParsedGames(Nutgram $bot, array $parsedGames): void
+    {
         $addedGames = [];
 
         foreach ($parsedGames as $parsedGame) {

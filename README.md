@@ -5,7 +5,7 @@ Symfony-проект с Telegram-ботом на `Nutgram` и хранением
 ## Что умеет бот
 
 - `/add_game {ссылка} {описание}`: добавляет игру в БД
-- `/add_game` также может добавить несколько игр сразу, если после команды передать несколько блоков `ссылка + описание`, разделённых пустой строкой
+- `/add_games`: добавляет несколько игр сразу, если после команды передать несколько блоков `ссылка + описание`, разделённых пустой строкой
 - `/get_games`: показывает игры со статусом `новая`
 - `/get_done_games`: показывает игры со статусом `пройдена`
 - `/get_dropped_games`: показывает игры со статусом `брошена`
@@ -19,7 +19,7 @@ Symfony-проект с Telegram-ботом на `Nutgram` и хранением
 Пример пакетного добавления:
 
 ```text
-/add_game https://store.steampowered.com/app/2956680/LORT/
+/add_games https://store.steampowered.com/app/2956680/LORT/
 LORT — action roguelike / third-person shooter / looter-shooter | РД: да | стиль: стилизованная гротескная 3D | год: 2026 | сеттинг: проклятый фэнтези-мир.
 
 https://store.steampowered.com/app/312670/?snr=1_5_9__205
@@ -94,7 +94,7 @@ docker compose exec php php bin/console nutgram:register-commands
 docker compose exec php php bin/console nutgram:run
 ```
 
-В меню Telegram регистрируются только команды без параметров. Команды `/add_game`, `/done_game`, `/drop_game`, `/delete_game` нужно вводить руками вместе с параметрами. Это сделано специально, чтобы Telegram не отправлял их случайно пустыми при выборе из меню.
+В меню Telegram регистрируются только команды без параметров. Команды `/add_game`, `/add_games`, `/done_game`, `/drop_game`, `/delete_game` нужно вводить руками вместе с параметрами. Это сделано специально, чтобы Telegram не отправлял их случайно пустыми при выборе из меню.
 
 ## Сервер
 

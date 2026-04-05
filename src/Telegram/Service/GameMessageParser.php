@@ -12,6 +12,33 @@ final readonly class GameMessageParser
     {
     }
 
+    public function parseAddGame(Message $message): ?ParsedGameMessage
+    {
+        $text = $message->text;
+
+        if (!is_string($text)) {
+            return null;
+        }
+
+        if (!preg_match('/^\/add_game(?:@\w+)?\s+(?<body>[\s\S]+)$/u', $text, $matches, PREG_OFFSET_CAPTURE)) {
+            return null;
+        }
+
+        $body = $matches['body'][0];
+        $bodyByteOffset = $matches['body'][1];
+
+        if (trim($body) === '') {
+            return null;
+        }
+
+        return $this->parseGameBlock(
+            $text,
+            $message->entities ?? [],
+            $body,
+            $bodyByteOffset,
+        );
+    }
+
     /**
      * @return list<ParsedGameMessage>|null
      */
@@ -23,7 +50,7 @@ final readonly class GameMessageParser
             return null;
         }
 
-        if (!preg_match('/^\/add_game(?:@\w+)?\s+(?<body>[\s\S]+)$/u', $text, $matches, PREG_OFFSET_CAPTURE)) {
+        if (!preg_match('/^\/add_games(?:@\w+)?\s+(?<body>[\s\S]+)$/u', $text, $matches, PREG_OFFSET_CAPTURE)) {
             return null;
         }
 

@@ -32,12 +32,11 @@ final class GameMessageParserTest extends TestCase
             ],
         ]);
 
-        $parsed = $parser->parseAddGames($message);
+        $parsed = $parser->parseAddGame($message);
 
         self::assertNotNull($parsed);
-        self::assertCount(1, $parsed);
-        self::assertSame('https://store.example/game', $parsed[0]->url);
-        self::assertSame("Первая строка\nВторая строка", $parsed[0]->descriptionText);
+        self::assertSame('https://store.example/game', $parsed->url);
+        self::assertSame("Первая строка\nВторая строка", $parsed->descriptionText);
         self::assertSame(
             [
                 [
@@ -46,8 +45,33 @@ final class GameMessageParserTest extends TestCase
                     'length' => 13,
                 ],
             ],
-            $parsed[0]->descriptionEntities
+            $parsed->descriptionEntities
         );
+    }
+
+    public function testParseAddGameKeepsEmptyLinesInsideDescription(): void
+    {
+        $parser = new GameMessageParser(new Utf16String());
+
+        $message = Message::fromArray([
+            'message_id' => 1,
+            'date' => time(),
+            'chat' => ['id' => 1, 'type' => 'private'],
+            'text' => "/add_game https://store.example/game Первая строка\n\nВторая строка",
+            'entities' => [
+                [
+                    'type' => 'bot_command',
+                    'offset' => 0,
+                    'length' => 9,
+                ],
+            ],
+        ]);
+
+        $parsed = $parser->parseAddGame($message);
+
+        self::assertNotNull($parsed);
+        self::assertSame('https://store.example/game', $parsed->url);
+        self::assertSame("Первая строка\n\nВторая строка", $parsed->descriptionText);
     }
 
     public function testParseAddGamesSupportsBulkBlocks(): void
@@ -58,12 +82,12 @@ final class GameMessageParserTest extends TestCase
             'message_id' => 1,
             'date' => time(),
             'chat' => ['id' => 1, 'type' => 'private'],
-            'text' => "/add_game https://store.example/game-1\nОписание первой игры\n\nhttps://store.example/game-2\nОписание второй игры",
+            'text' => "/add_games https://store.example/game-1\nОписание первой игры\n\nhttps://store.example/game-2\nОписание второй игры",
             'entities' => [
                 [
                     'type' => 'bot_command',
                     'offset' => 0,
-                    'length' => 9,
+                    'length' => 10,
                 ],
             ],
         ]);
