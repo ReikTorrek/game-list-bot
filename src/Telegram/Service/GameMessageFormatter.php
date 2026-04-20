@@ -99,6 +99,7 @@ final readonly class GameMessageFormatter
         $currentEntities = [];
         $currentLength = $this->utf16String->length($currentText);
         $hasGamesInCurrentChunk = false;
+        $totalMessageLength = 0;
 
         foreach ($games as $game) {
             $formattedGame = $this->format($game);
@@ -106,8 +107,9 @@ final readonly class GameMessageFormatter
             $separatorLength = $this->utf16String->length($separator);
             $gameLength = $this->utf16String->length($formattedGame['text']);
             $candidateLength = $currentLength + $separatorLength + $gameLength;
+            $totalMessageLength += $candidateLength;
 
-            if ($candidateLength > self::TELEGRAM_TEXT_LIMIT) {
+            if ($totalMessageLength > self::TELEGRAM_TEXT_LIMIT) {
                 if ($hasGamesInCurrentChunk) {
                     $chunks[] = [
                         'text' => $currentText,
@@ -118,6 +120,7 @@ final readonly class GameMessageFormatter
                     $currentEntities = $formattedGame['entities'];
                     $currentLength = $gameLength;
                     $hasGamesInCurrentChunk = true;
+                    $totalMessageLength = 0;
                     continue;
                 }
 
