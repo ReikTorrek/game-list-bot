@@ -109,6 +109,8 @@ final class GameMessageFormatterTest extends TestCase
         );
 
         self::assertCount(2, $chunks);
+        self::assertStringContainsString('Страница 1/2', $chunks[0]['text']);
+        self::assertStringContainsString('Страница 2/2', $chunks[1]['text']);
         self::assertStringContainsString('Игра #1', $chunks[0]['text']);
         self::assertStringNotContainsString('Игра #2', $chunks[0]['text']);
         self::assertStringContainsString('Игра #2', $chunks[1]['text']);

@@ -8,9 +8,14 @@ use App\Repository\GameRepository;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use SergiX44\Nutgram\Nutgram;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
 final readonly class GameBotHandler
 {
+    private const GAMES_PAGE_CALLBACK_PREFIX = 'games_page';
+    private const GAMES_CLOSE_CALLBACK_ACTION = 'close';
+
     public function __construct(
         private EntityManagerInterface $entityManager,
         private GameRepository $gameRepository,
@@ -251,10 +256,130 @@ final readonly class GameBotHandler
             sprintf('Найдено игр со статусом "%s": %d', $status->label(), count($games)),
         );
 
-        foreach ($chunks as $chunk) {
-            $bot->sendMessage($chunk['text'], entities: $chunk['entities']);
-            usleep(100_000);
+        $firstPage = $chunks[0];
+
+        $bot->sendMessage(
+            $firstPage['text'],
+            entities: $firstPage['entities'],
+            reply_markup: $this->buildGamesPaginationKeyboard($status, 0, count($chunks)),
+        );
+    }
+
+    public function handleGamesPagination(Nutgram $bot): void
+    {
+        $callbackQuery = $bot->callbackQuery();
+        $callbackData = $callbackQuery?->data;
+
+        if ($callbackData === null) {
+            return;
         }
+
+        $pageRequest = $this->parseGamesPageCallbackData($callbackData);
+
+        if ($pageRequest === null) {
+            return;
+        }
+
+        $bot->answerCallbackQuery();
+
+        $message = $callbackQuery->message;
+
+        if ($message === null) {
+            return;
+        }
+
+        if ($pageRequest['action'] === self::GAMES_CLOSE_CALLBACK_ACTION) {
+            $bot->deleteMessage(
+                chat_id: $message->chat->id,
+                message_id: $message->message_id,
+            );
+            return;
+        }
+
+        $games = $this->gameRepository->findByStatus($pageRequest['status']);
+
+        if ($games === []) {
+            $bot->editMessageText(
+                sprintf('Список игр со статусом "%s" пуст.', $pageRequest['status']->label()),
+                chat_id: $message->chat->id,
+                message_id: $message->message_id,
+            );
+            return;
+        }
+
+        $pages = $this->gameMessageFormatter->formatList(
+            $games,
+            sprintf('Найдено игр со статусом "%s": %d', $pageRequest['status']->label(), count($games)),
+        );
+
+        $pageIndex = min($pageRequest['page'], count($pages) - 1);
+        $page = $pages[$pageIndex];
+
+        $bot->editMessageText(
+            $page['text'],
+            chat_id: $message->chat->id,
+            message_id: $message->message_id,
+            entities: $page['entities'],
+            reply_markup: $this->buildGamesPaginationKeyboard($pageRequest['status'], $pageIndex, count($pages)),
+        );
+    }
+
+    private function buildGamesPaginationKeyboard(GameStatus $status, int $pageIndex, int $pageCount): InlineKeyboardMarkup
+    {
+        $buttons = [];
+
+        if ($pageIndex > 0) {
+            $buttons[] = InlineKeyboardButton::make(
+                text: 'Назад',
+                callback_data: $this->buildGamesPageCallbackData($status, $pageIndex - 1),
+            );
+        }
+
+        if ($pageIndex < $pageCount - 1) {
+            $buttons[] = InlineKeyboardButton::make(
+                text: 'Далее',
+                callback_data: $this->buildGamesPageCallbackData($status, $pageIndex + 1),
+            );
+        }
+
+        $buttons[] = InlineKeyboardButton::make(
+            text: 'Закрыть',
+            callback_data: $this->buildGamesCloseCallbackData($status),
+        );
+
+        return InlineKeyboardMarkup::make()->addRow(...$buttons);
+    }
+
+    private function buildGamesPageCallbackData(GameStatus $status, int $pageIndex): string
+    {
+        return sprintf('%s:%s:%d', self::GAMES_PAGE_CALLBACK_PREFIX, $status->value, $pageIndex);
+    }
+
+    private function buildGamesCloseCallbackData(GameStatus $status): string
+    {
+        return sprintf('%s:%s:%s', self::GAMES_PAGE_CALLBACK_PREFIX, $status->value, self::GAMES_CLOSE_CALLBACK_ACTION);
+    }
+
+    /**
+     * @return array{status: GameStatus, page: int, action: 'page'|'close'}|null
+     */
+    private function parseGamesPageCallbackData(string $callbackData): ?array
+    {
+        if (!preg_match('/^' . self::GAMES_PAGE_CALLBACK_PREFIX . ':(new|done|dropped):(\d+|close)$/', $callbackData, $matches)) {
+            return null;
+        }
+
+        $status = GameStatus::tryFrom($matches[1]);
+
+        if (!$status instanceof GameStatus) {
+            return null;
+        }
+
+        return [
+            'status' => $status,
+            'page' => $matches[2] === self::GAMES_CLOSE_CALLBACK_ACTION ? 0 : (int) $matches[2],
+            'action' => $matches[2] === self::GAMES_CLOSE_CALLBACK_ACTION ? self::GAMES_CLOSE_CALLBACK_ACTION : 'page',
+        ];
     }
 
     public function changeStatusById(Nutgram $bot, int $gameId, GameStatus $newStatus): void

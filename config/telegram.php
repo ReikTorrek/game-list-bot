@@ -35,6 +35,8 @@ $bot->onCommand('get_done_games', [$handler, 'getDoneGames'])
 $bot->onCommand('get_dropped_games', [$handler, 'getDroppedGames'])
     ->description('Показать брошенные игры');
 
+$bot->onCallbackQuery([$handler, 'handleGamesPagination']);
+
 $bot->onCommand('find_game', [$handler, 'findGame']);
 
 $bot->onText('/find_game{suffix}', [$handler, 'findGame'])

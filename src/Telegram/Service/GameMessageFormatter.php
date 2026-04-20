@@ -94,99 +94,79 @@ final readonly class GameMessageFormatter
      */
     public function formatList(array $games, string $header): array
     {
-        $chunks = [];
-        $currentText = $header;
-        $currentEntities = [];
-        $currentLength = $this->utf16String->length($currentText);
-        $hasGamesInCurrentChunk = false;
-        $totalMessageLength = 0;
+        $formattedGames = array_map($this->format(...), $games);
+        $reservedHeader = $this->buildReservedPageHeader($header, $formattedGames);
+        $reservedHeaderLength = $this->utf16String->length($reservedHeader);
 
-        foreach ($games as $game) {
-            $formattedGame = $this->format($game);
-            $separator = $hasGamesInCurrentChunk || $currentText !== '' ? "\n\n" : '';
-            $separatorLength = $this->utf16String->length($separator);
-            $gameLength = $this->utf16String->length($formattedGame['text']);
-            $candidateLength = $currentLength + $separatorLength + $gameLength;
-            $totalMessageLength += $candidateLength;
-
-            if ($totalMessageLength > self::TELEGRAM_TEXT_LIMIT) {
-                if ($hasGamesInCurrentChunk) {
-                    $chunks[] = [
-                        'text' => $currentText,
-                        'entities' => $currentEntities,
-                    ];
-
-                    $currentText = $formattedGame['text'];
-                    $currentEntities = $formattedGame['entities'];
-                    $currentLength = $gameLength;
-                    $hasGamesInCurrentChunk = true;
-                    $totalMessageLength = 0;
-                    continue;
-                }
-
-                if ($currentText !== '') {
-                    $chunks[] = [
-                        'text' => $currentText,
-                        'entities' => $currentEntities,
-                    ];
-                }
-
-                $currentText = $formattedGame['text'];
-                $currentEntities = $formattedGame['entities'];
-                $currentLength = $gameLength;
-                $hasGamesInCurrentChunk = true;
-                continue;
-            }
-
-            $shift = $currentLength + $separatorLength;
-
-            foreach ($formattedGame['entities'] as $entity) {
-                $entity['offset'] += $shift;
-                $currentEntities[] = $entity;
-            }
-
-            $currentText .= $separator . $formattedGame['text'];
-            $currentLength = $candidateLength;
-            $hasGamesInCurrentChunk = true;
+        if ($reservedHeader !== '') {
+            $reservedHeaderLength += $this->utf16String->length("\n\n");
         }
 
-        if ($currentText !== '') {
-            $chunks[] = [
-                'text' => $currentText,
-                'entities' => $currentEntities,
-            ];
+        $maxContentLength = self::TELEGRAM_TEXT_LIMIT - $reservedHeaderLength;
+
+        if ($maxContentLength <= 0) {
+            throw new \LogicException('Header is too long to fit into Telegram message limit.');
         }
 
-        return $this->splitOversizedChunks($chunks);
+        $pages = [];
+        $currentPageItems = [];
+        $currentPageContentLength = 0;
+
+        foreach ($formattedGames as $formattedGame) {
+            $gameParts = $this->utf16String->length($formattedGame['text']) <= $maxContentLength
+                ? [$formattedGame]
+                : $this->splitFormattedChunk($formattedGame, $maxContentLength);
+
+            foreach ($gameParts as $gamePart) {
+                $separatorLength = $currentPageItems === []
+                    ? 0
+                    : $this->utf16String->length("\n\n");
+                $gamePartLength = $this->utf16String->length($gamePart['text']);
+
+                if (
+                    $currentPageItems !== []
+                    && $currentPageContentLength + $separatorLength + $gamePartLength > $maxContentLength
+                ) {
+                    $pages[] = $currentPageItems;
+                    $currentPageItems = [];
+                    $currentPageContentLength = 0;
+                    $separatorLength = 0;
+                }
+
+                $currentPageItems[] = $gamePart;
+                $currentPageContentLength += $separatorLength + $gamePartLength;
+            }
+        }
+
+        if ($currentPageItems !== []) {
+            $pages[] = $currentPageItems;
+        }
+
+        return $this->buildPages($pages, $header);
     }
 
     /**
-     * @param list<array{text: string, entities: list<array<string, mixed>>}> $chunks
-     * @return list<array{text: string, entities: list<array<string, mixed>>}>
+     * @param list<array{text: string, entities: list<array<string, mixed>>}> $formattedGames
      */
-    private function splitOversizedChunks(array $chunks): array
+    private function buildReservedPageHeader(string $header, array $formattedGames): string
     {
-        $result = [];
+        $totalContentLength = 0;
 
-        foreach ($chunks as $chunk) {
-            if ($this->utf16String->length($chunk['text']) <= self::TELEGRAM_TEXT_LIMIT) {
-                $result[] = $chunk;
-                continue;
-            }
-
-            foreach ($this->splitFormattedChunk($chunk) as $chunkPart) {
-                $result[] = $chunkPart;
-            }
+        foreach ($formattedGames as $formattedGame) {
+            $totalContentLength += $this->utf16String->length($formattedGame['text']);
         }
 
-        return $result;
+        $maxPageDigits = strlen((string) max(1, $totalContentLength));
+        $pagePlaceholder = str_repeat('9', $maxPageDigits);
+
+        return sprintf('%s%s', $header, sprintf("\nСтраница %s/%s", $pagePlaceholder, $pagePlaceholder));
     }
 
     /**
      * @param array{text: string, entities: list<array<string, mixed>>} $chunk
      * @return list<array{text: string, entities: list<array<string, mixed>>}>
      */
-    private function splitFormattedChunk(array $chunk): array
+    private function splitFormattedChunk(array $chunk, int $maxLength = self::TELEGRAM_TEXT_LIMIT): array
     {
         $parts = [];
         $remainingText = $chunk['text'];
@@ -195,7 +175,7 @@ final readonly class GameMessageFormatter
         while ($remainingText !== '') {
             $remainingLength = $this->utf16String->length($remainingText);
 
-            if ($remainingLength <= self::TELEGRAM_TEXT_LIMIT) {
+            if ($remainingLength <= $maxLength) {
                 $parts[] = [
                     'text' => $remainingText,
                     'entities' => $remainingEntities,
@@ -203,7 +183,7 @@ final readonly class GameMessageFormatter
                 break;
             }
 
-            $prefix = $this->sliceByUtf16Length($remainingText, self::TELEGRAM_TEXT_LIMIT);
+            $prefix = $this->sliceByUtf16Length($remainingText, $maxLength);
             $splitPosition = $this->findPreferredSplitPosition($prefix) ?? mb_strlen($prefix);
 
             if ($splitPosition <= 0) {
@@ -223,6 +203,53 @@ final readonly class GameMessageFormatter
         }
 
         return $parts;
+    }
+
+    /**
+     * @param list<list<array{text: string, entities: list<array<string, mixed>>}>> $pages
+     * @return list<array{text: string, entities: list<array<string, mixed>>}>
+     */
+    private function buildPages(array $pages, string $header): array
+    {
+        $result = [];
+        $pageCount = count($pages);
+
+        foreach ($pages as $pageIndex => $pageItems) {
+            $pageHeader = $this->buildPageHeader($header, $pageIndex + 1, $pageCount);
+            $pageText = $pageHeader;
+            $pageEntities = [];
+            $pageLength = $this->utf16String->length($pageText);
+
+            foreach ($pageItems as $pageItem) {
+                $separator = $pageText !== '' ? "\n\n" : '';
+                $separatorLength = $this->utf16String->length($separator);
+                $shift = $pageLength + $separatorLength;
+
+                foreach ($pageItem['entities'] as $entity) {
+                    $entity['offset'] += $shift;
+                    $pageEntities[] = $entity;
+                }
+
+                $pageText .= $separator . $pageItem['text'];
+                $pageLength += $separatorLength + $this->utf16String->length($pageItem['text']);
+            }
+
+            $result[] = [
+                'text' => $pageText,
+                'entities' => $pageEntities,
+            ];
+        }
+
+        return $result;
+    }
+
+    private function buildPageHeader(string $header, int $pageNumber, int $pageCount): string
+    {
+        if ($pageCount <= 1) {
+            return $header;
+        }
+
+        return sprintf("%s\nСтраница %d/%d", $header, $pageNumber, $pageCount);
     }
 
     private function sliceByUtf16Length(string $text, int $maxLength): string
