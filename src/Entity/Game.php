@@ -43,6 +43,9 @@ class Game
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $steamOverallReviewSummary = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?bool $isEarlyAccess = null;
+
     #[ORM\Column(length: 20, enumType: GameStatus::class)]
     private GameStatus $status = GameStatus::NEW;
 
@@ -192,6 +195,18 @@ class Game
     public function getUpdatedAt(): \DateTimeImmutable
     {
         return $this->updatedAt;
+    }
+
+    public function getIsEarlyAccess(): ?bool
+    {
+        return $this->isEarlyAccess;
+    }
+
+    public function setIsEarlyAccess(?bool $isEarlyAccess): self
+    {
+        $this->isEarlyAccess = $isEarlyAccess;
+
+        return $this;
     }
 
     #[ORM\PrePersist]

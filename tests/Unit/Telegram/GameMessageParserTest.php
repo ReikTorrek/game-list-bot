@@ -102,6 +102,50 @@ final class GameMessageParserTest extends TestCase
         self::assertSame('Описание второй игры', $parsed[1]->descriptionText);
     }
 
+    public function testParseAddGameAllowsSteamUrlWithoutDescription(): void
+    {
+        $parser = new GameMessageParser(new Utf16String());
+
+        $message = Message::fromArray([
+            'message_id' => 1,
+            'date' => time(),
+            'chat' => ['id' => 1, 'type' => 'private'],
+            'text' => '/add_game https://store.steampowered.com/app/620/Portal_2/',
+            'entities' => [
+                [
+                    'type' => 'bot_command',
+                    'offset' => 0,
+                    'length' => 9,
+                ],
+            ],
+        ]);
+
+        $parsed = $parser->parseAddGame($message);
+
+        self::assertNotNull($parsed);
+        self::assertSame('https://store.steampowered.com/app/620/Portal_2/', $parsed->url);
+        self::assertNull($parsed->descriptionText);
+        self::assertSame([], $parsed->descriptionEntities);
+    }
+
+    public function testParseAddGamesAllowsBlocksWithoutDescription(): void
+    {
+        $parser = new GameMessageParser(new Utf16String());
+
+        $message = Message::fromArray([
+            'message_id' => 1,
+            'date' => time(),
+            'chat' => ['id' => 1, 'type' => 'private'],
+            'text' => "/add_games https://store.steampowered.com/app/620/Portal_2/\n\nhttps://store.example/game Описание",
+        ]);
+
+        $parsed = $parser->parseAddGames($message);
+
+        self::assertNotNull($parsed);
+        self::assertNull($parsed[0]->descriptionText);
+        self::assertSame('Описание', $parsed[1]->descriptionText);
+    }
+
     public function testParseGameIdArgument(): void
     {
         $parser = new GameMessageParser(new Utf16String());

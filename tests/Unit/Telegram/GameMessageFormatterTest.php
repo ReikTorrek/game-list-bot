@@ -47,6 +47,7 @@ final class GameMessageFormatterTest extends TestCase
             ->setDescriptionEntities(null)
             ->setSteamAppId(620)
             ->setSteamName('Portal 2')
+            ->setIsEarlyAccess(true)
             ->setSteamPrice('$9.99')
             ->setSteamPriceRub('385 pуб.')
             ->setSteamRecentReviewSummary('Крайне положительные (98%, 1 234 отзывов)')
@@ -60,6 +61,7 @@ final class GameMessageFormatterTest extends TestCase
 
         self::assertStringContainsString('Название в Steam: Portal 2', $formatted['text']);
         self::assertStringContainsString('Steam App ID: 620', $formatted['text']);
+        self::assertStringContainsString('Ранний доступ: Да', $formatted['text']);
         self::assertStringContainsString('Цена в Steam: $9.99 (385 pуб.)', $formatted['text']);
         self::assertStringNotContainsString('Цена в Steam (RU): 385 pуб.', $formatted['text']);
         self::assertStringContainsString('Недавние отзывы в Steam: Крайне положительные (98%, 1 234 отзывов)', $formatted['text']);

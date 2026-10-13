@@ -3,6 +3,7 @@
 namespace App\Telegram\Service;
 
 use App\Entity\Game;
+use App\Telegram\Dto\SteamGameMetadata;
 use Psr\Log\LoggerInterface;
 
 final readonly class SteamMetadataUpdater
@@ -13,7 +14,7 @@ final readonly class SteamMetadataUpdater
     ) {
     }
 
-    public function refresh(Game $game): bool
+    public function refresh(Game $game): ?SteamGameMetadata
     {
         try {
             $steamMetadata = $this->steamStoreClient->fetchMetadataForUrl($game->getUrl());
@@ -23,11 +24,11 @@ final readonly class SteamMetadataUpdater
                 'exception' => $exception,
             ]);
 
-            return false;
+            return null;
         }
 
         if ($steamMetadata === null) {
-            return false;
+            return null;
         }
 
         $game
@@ -36,8 +37,9 @@ final readonly class SteamMetadataUpdater
             ->setSteamPrice($steamMetadata->price)
             ->setSteamPriceRub($steamMetadata->priceRub)
             ->setSteamRecentReviewSummary($steamMetadata->recentReviewSummary)
-            ->setSteamOverallReviewSummary($steamMetadata->overallReviewSummary);
+            ->setSteamOverallReviewSummary($steamMetadata->overallReviewSummary)
+            ->setIsEarlyAccess($steamMetadata->isEarlyAccess);
 
-        return true;
+        return $steamMetadata;
     }
 }

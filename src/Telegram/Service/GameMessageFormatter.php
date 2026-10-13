@@ -37,6 +37,10 @@ final readonly class GameMessageFormatter
         if ($game->getSteamAppId() !== null) {
             $prefixLines[] = sprintf('Steam App ID: %d', $game->getSteamAppId());
         }
+        if ($game->getIsEarlyAccess() !== null) {
+            $isEarlyAccess = $game->getIsEarlyAccess() ? 'Да' : 'Нет';
+            $prefixLines[] = sprintf('Ранний доступ: %s', $isEarlyAccess);
+        }
 
         if ($game->getSteamPrice() !== null && $game->getSteamPriceRub() !== null) {
             $prefixLines[] = sprintf('Цена в Steam: %s (%s)', $game->getSteamPrice(), $game->getSteamPriceRub());

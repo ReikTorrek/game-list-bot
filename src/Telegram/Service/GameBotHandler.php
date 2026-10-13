@@ -31,7 +31,7 @@ final readonly class GameBotHandler
     {
         $bot->sendMessage(implode("\n", [
             'Доступные команды:',
-            '/add_game {ссылка} {описание} - добавить одну игру',
+            '/add_game {ссылка} [описание] - добавить одну игру',
             '/add_games + несколько блоков "ссылка + описание" через пустую строку - добавить несколько игр',
             '/get_games - список новых игр',
             '/get_done_games - список пройденных игр',
@@ -56,7 +56,7 @@ final readonly class GameBotHandler
         $parsedGame = $this->gameMessageParser->parseAddGame($message);
 
         if ($parsedGame === null) {
-            $bot->sendMessage("Неверный формат.\nИспользуй:\n/add_game https://example.com Описание игры");
+            $bot->sendMessage("Неверный формат.\nИспользуй:\n/add_game https://example.com [Описание игры]");
             return;
         }
 
@@ -74,7 +74,7 @@ final readonly class GameBotHandler
         $parsedGames = $this->gameMessageParser->parseAddGames($message);
 
         if ($parsedGames === null) {
-            $bot->sendMessage("Неверный формат.\nИспользуй:\n/add_games https://example.com/game-1 Описание 1\n\nhttps://example.com/game-2 Описание 2");
+            $bot->sendMessage("Неверный формат.\nИспользуй:\n/add_games https://example.com/game-1 [Описание 1]\n\nhttps://example.com/game-2 [Описание 2]");
             return;
         }
 
@@ -96,12 +96,20 @@ final readonly class GameBotHandler
 
             $game = (new Game())
                 ->setUrl($parsedGame->url)
-                ->setDescriptionText($parsedGame->descriptionText)
                 ->setDescriptionEntities($parsedGame->descriptionEntities)
                 ->setSteamAppId($this->steamStoreClient->extractAppId($parsedGame->url))
                 ->setStatus(GameStatus::NEW);
 
-            $this->steamMetadataUpdater->refresh($game);
+            $steamMetadata = $this->steamMetadataUpdater->refresh($game);
+
+            $descriptionText = $parsedGame->descriptionText ?? $steamMetadata?->shortDescription;
+
+            if (null === $descriptionText) {
+                $bot->sendMessage('Не удалось получить краткое описание из Steam. Добавь описание после ссылки.');
+                return;
+            }
+
+            $game->setDescriptionText($descriptionText);
 
             $duplicateMessage = $this->buildSteamDuplicateMessage($game, $addedGames);
 

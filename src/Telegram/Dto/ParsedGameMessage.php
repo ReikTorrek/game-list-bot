@@ -9,7 +9,7 @@ final readonly class ParsedGameMessage
      */
     public function __construct(
         public string $url,
-        public string $descriptionText,
+        public ?string $descriptionText,
         public array $descriptionEntities,
     ) {
     }

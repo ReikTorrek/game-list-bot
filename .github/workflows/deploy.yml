@@ -1,0 +1,72 @@
+name: Deploy production
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the selected revision
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: ctype, iconv, intl, mbstring, xml
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run tests
+        run: php bin/phpunit --testdox
+
+  deploy:
+    name: Deploy
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    permissions: {}
+    env:
+      DEPLOY_HOST: 91.214.240.166
+      DEPLOY_PORT: '2222'
+      DEPLOY_USER: reikserver
+      DEPLOY_PATH: /var/www/game-list-bot
+
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy tested revision
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=yes -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_SHA=$DEPLOY_SHA DEPLOY_PATH=$DEPLOY_PATH bash -se" <<'REMOTE_COMMANDS'
+            cd "$DEPLOY_PATH"
+
+            if [[ -n "$(git status --porcelain)" ]]; then
+              echo 'Deployment aborted: the server worktree has uncommitted changes.' >&2
+              exit 1
+            fi
+
+            git fetch --depth=1 origin "$DEPLOY_SHA"
+            git checkout --detach "$DEPLOY_SHA"
+            ./scripts/deploy.sh --service game-list-bot
+          REMOTE_COMMANDS

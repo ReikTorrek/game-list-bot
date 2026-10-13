@@ -27,6 +27,10 @@ final class SteamStoreClientTest extends TestCase
                     'success' => true,
                     'data' => [
                         'name' => 'Portal 2',
+                        'short_description' => 'Создавайте порталы &amp; решайте <strong>головоломки</strong>.<br>Вместе с другом.',
+                        'genres' => [
+                            ['id' => '70', 'description' => 'Early Access'],
+                        ],
                         'is_free' => false,
                         'price_overview' => [
                             'final_formatted' => '$9.99',
@@ -68,6 +72,8 @@ final class SteamStoreClientTest extends TestCase
         self::assertNotNull($metadata);
         self::assertSame(620, $metadata->appId);
         self::assertSame('Portal 2', $metadata->name);
+        self::assertSame("Создавайте порталы & решайте головоломки.\nВместе с другом.", $metadata->shortDescription);
+        self::assertTrue($metadata->isEarlyAccess);
         self::assertSame('$9.99', $metadata->price);
         self::assertSame('385 pуб.', $metadata->priceRub);
         self::assertSame('Крайне положительные (98%, 1 000 отзывов)', $metadata->recentReviewSummary);

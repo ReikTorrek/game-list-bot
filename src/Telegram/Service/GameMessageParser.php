@@ -55,7 +55,7 @@ final readonly class GameMessageParser
         }
 
         $body = $matches['body'][0];
-        $bodyByteOffset = $matches['body'][1];
+        $bodyByteOffset = (int)$matches['body'][1];
 
         if (trim($body) === '') {
             return null;
@@ -70,7 +70,7 @@ final readonly class GameMessageParser
                 $text,
                 $message->entities ?? [],
                 $blockText,
-                $bodyByteOffset + $blockOffset,
+                $bodyByteOffset + (int)$blockOffset,
             );
 
             if ($parsedGame === null) {
@@ -161,19 +161,32 @@ final readonly class GameMessageParser
             return null;
         }
 
-        if (preg_match('/^(?<url>\S+)(?<separator>\s+)(?<description>[\s\S]+)$/u', $blockText, $matches, PREG_OFFSET_CAPTURE) !== 1) {
+        if (1 !== preg_match('/^(?<url>\S+)(?:(?<separator>\s+)(?<description>[\s\S]+))?$/u', $blockText, $matches, PREG_OFFSET_CAPTURE)) {
             return null;
         }
 
         $url = trim($matches['url'][0]);
-        $descriptionText = $matches['description'][0];
-        $descriptionStartInBlock = $matches['description'][1];
 
-        if ($url === '' || trim($descriptionText) === '') {
+        if ('' === $url) {
             return null;
         }
 
-        $descriptionByteOffsetInText = $blockByteOffsetInText + $descriptionStartInBlock;
+        if (!isset($matches['description'])) {
+            return new ParsedGameMessage(
+                url: $url,
+                descriptionText: null,
+                descriptionEntities: [],
+            );
+        }
+
+        $descriptionText = $matches['description'][0];
+        $descriptionStartInBlock = $matches['description'][1];
+
+        if ('' === trim($descriptionText)) {
+            return null;
+        }
+
+        $descriptionByteOffsetInText = (int)$blockByteOffsetInText + (int)$descriptionStartInBlock;
         $descriptionOffset = $this->utf16String->length(substr($fullText, 0, $descriptionByteOffsetInText));
         $descriptionLength = $this->utf16String->length($descriptionText);
 

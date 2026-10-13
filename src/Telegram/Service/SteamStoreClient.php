@@ -31,10 +31,12 @@ final readonly class SteamStoreClient
         return new SteamGameMetadata(
             appId: $appId,
             name: $this->extractName($appDetails),
+            shortDescription: $this->extractShortDescription($appDetails),
             price: $this->extractPrice($appDetails),
             priceRub: $this->extractPrice($appDetailsRu),
             recentReviewSummary: $recentSummary,
             overallReviewSummary: $overallSummary,
+            isEarlyAccess: $this->isEarlyAccess($appDetails),
         );
     }
 
@@ -134,7 +136,7 @@ final readonly class SteamStoreClient
      */
     private function extractPrice(?array $appDetails): ?string
     {
-        if ($appDetails === null) {
+        if (null === $appDetails) {
             return null;
         }
 
@@ -165,5 +167,54 @@ final readonly class SteamStoreClient
         $name = $appDetails['name'] ?? null;
 
         return is_string($name) && $name !== '' ? $name : null;
+    }
+
+    /**
+     * @param array<string, mixed>|null $appDetails
+     */
+    private function extractShortDescription(?array $appDetails): ?string
+    {
+        if ($appDetails === null) {
+            return null;
+        }
+
+        $shortDescription = $appDetails['short_description'] ?? null;
+
+        if (!is_string($shortDescription)) {
+            return null;
+        }
+
+        $description = preg_replace('/<br\\s*\\/?\\s*>/iu', "\n", $shortDescription);
+        $description = strip_tags($description ?? $shortDescription);
+        $description = html_entity_decode($description, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $description = trim($description);
+
+        return '' !== $description ? $description : null;
+    }
+
+    /**
+     * Steam identifies Early Access games by genre ID 70.
+     *
+     * @param array<string, mixed>|null $appDetails
+     */
+    private function isEarlyAccess(?array $appDetails): ?bool
+    {
+        if (null === $appDetails) {
+            return null;
+        }
+
+        $genres = $appDetails['genres'] ?? null;
+
+        if (!is_array($genres)) {
+            return false;
+        }
+
+        foreach ($genres as $genre) {
+            if (is_array($genre) && '70' === (string) ($genre['id'] ?? '')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
