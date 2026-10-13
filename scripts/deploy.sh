@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+umask 0002
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_ENV="${APP_ENV:-prod}"
 PHP_BIN="${PHP_BIN:-php}"
@@ -100,39 +102,19 @@ echo "==> Регистрация Telegram-команд"
 
 if [[ -n "$SERVICE_NAME" && "$NO_RESTART" -eq 0 ]]; then
     require_command systemctl
+    systemctl_bin="$(command -v systemctl)"
     echo "==> Перезапуск systemd unit $SERVICE_NAME"
-    if sudo -n systemctl restart "$SERVICE_NAME"; then
-        sudo -n systemctl status "$SERVICE_NAME" --no-pager
-    else
-        service_user="$(systemctl show "$SERVICE_NAME" --property=User --value)"
-        current_user="$(id --user --name)"
-        main_pid="$(systemctl show "$SERVICE_NAME" --property=MainPID --value)"
-
-        if [[ "$service_user" != "$current_user" || ! "$main_pid" =~ ^[1-9][0-9]*$ ]]; then
-            echo "Не удалось перезапустить $SERVICE_NAME. Настрой passwordless sudo для systemctl restart или запусти деплой вручную." >&2
-            exit 1
-        fi
-
-        kill -TERM "$main_pid"
-
-        for _ in {1..10}; do
-            restarted_pid="$(systemctl show "$SERVICE_NAME" --property=MainPID --value)"
-
-            if [[ "$restarted_pid" =~ ^[1-9][0-9]*$ && "$restarted_pid" != "$main_pid" ]] && systemctl is-active --quiet "$SERVICE_NAME"; then
-                echo "==> $SERVICE_NAME перезапущен systemd"
-                break
-            fi
-
-            sleep 1
-        done
-
-        restarted_pid="$(systemctl show "$SERVICE_NAME" --property=MainPID --value)"
-
-        if [[ ! "$restarted_pid" =~ ^[1-9][0-9]*$ || "$restarted_pid" == "$main_pid" ]] || ! systemctl is-active --quiet "$SERVICE_NAME"; then
-            echo "Сервис $SERVICE_NAME не запустился после перезапуска." >&2
-            exit 1
-        fi
+    if ! sudo -n "$systemctl_bin" restart "$SERVICE_NAME"; then
+        echo "Не удалось перезапустить $SERVICE_NAME через sudo без пароля." >&2
+        exit 1
     fi
+
+    if ! sudo -n "$systemctl_bin" is-active --quiet "$SERVICE_NAME"; then
+        echo "Сервис $SERVICE_NAME не запустился после перезапуска." >&2
+        exit 1
+    fi
+
+    echo "==> $SERVICE_NAME успешно перезапущен"
 elif [[ -n "$SERVICE_NAME" ]]; then
     echo "==> Перезапуск $SERVICE_NAME пропущен флагом --no-restart"
 else

@@ -178,8 +178,10 @@ Workflow [.github/workflows/deploy.yml](/home/reik/projects/php/game-list-bot/.g
 
 Перед первым запуском добавь в GitHub repository secrets:
 
-- `DEPLOY_SSH_PRIVATE_KEY` — закрытый ключ пользователя `reikserver` для подключения к серверу;
+- `DEPLOY_SSH_PRIVATE_KEY` — закрытый ключ пользователя `game-list-deploy` для подключения к серверу;
 - `DEPLOY_KNOWN_HOSTS` — строка из `known_hosts` для `91.214.240.166:2222`.
+
+Workflow подключается на сервер как отдельный технический пользователь `game-list-deploy`. Его SSH-ключ для GitHub Actions нужно указать в `DEPLOY_SSH_PRIVATE_KEY`; исходный код с GitHub сервер получает отдельным read-only deploy key, настроенным для этого пользователя.
 
 Для отдельного подтверждения перед выкладкой создай environment `production` в настройках репозитория и включи **Required reviewers**. Workflow уже использует это environment: GitHub покажет кнопку подтверждения после успешных тестов.
 
