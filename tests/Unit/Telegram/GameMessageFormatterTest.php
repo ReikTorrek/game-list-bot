@@ -59,7 +59,7 @@ final class GameMessageFormatterTest extends TestCase
         $formatter = new GameMessageFormatter(new Utf16String());
         $formatted = $formatter->format($game);
 
-        self::assertStringContainsString('Название в Steam: Portal 2', $formatted['text']);
+        self::assertStringContainsString('Название: Portal 2', $formatted['text']);
         self::assertStringContainsString('Steam App ID: 620', $formatted['text']);
         self::assertStringContainsString('Ранний доступ: Да', $formatted['text']);
         self::assertStringContainsString('Цена в Steam: $9.99 (385 pуб.)', $formatted['text']);

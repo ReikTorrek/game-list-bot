@@ -24,15 +24,14 @@ final readonly class GameMessageFormatter
             throw new \LogicException('Game ID must be available before formatting.');
         }
 
-        $prefixLines = [
-            sprintf('Игра #%d', $id),
-            sprintf('Статус: %s', $game->getStatus()->label()),
-            sprintf('Ссылка: %s', $game->getUrl()),
-        ];
+        $prefixLines = [sprintf('Игра #%d', $id),];
 
         if ($game->getSteamName() !== null) {
-            $prefixLines[] = sprintf('Название в Steam: %s', $game->getSteamName());
+            $prefixLines[] = sprintf('Название: %s', $game->getSteamName());
         }
+
+        $prefixLines[] = sprintf('Статус: %s', $game->getStatus()->label());
+        $prefixLines[] = sprintf('Ссылка: %s', $game->getUrl());
 
         if ($game->getSteamAppId() !== null) {
             $prefixLines[] = sprintf('Steam App ID: %d', $game->getSteamAppId());
